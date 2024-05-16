@@ -37,7 +37,6 @@ def scrap_allocine(genre_name, genre_code, num_pages):
         if soup is not None:
             movie_containers = soup.find_all('div', class_='card entity-card entity-card-list cf')
 
-            # Extraire les données de chaque film
             for container in movie_containers:
 
                 title = container.h2.a.text.strip()
