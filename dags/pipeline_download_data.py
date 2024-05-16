@@ -57,4 +57,4 @@ with DAG(
         }
     )
 
-task_upload_to_s3
+task_scrap_netflix >> task_scrap_allocine >> task_upload_to_s3

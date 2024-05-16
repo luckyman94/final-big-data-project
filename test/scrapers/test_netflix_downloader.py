@@ -3,7 +3,7 @@ import sys
 
 import pytest
 from unittest import mock
-sys.path.append('/Users/ilan/big-data-airflow-project')
+sys.path.append('/')
 from src.scraping.netflix_downloader import fetch_data_from_github, download_netflix_data
 
 GITHUB_DATA_URL = 'https://raw.githubusercontent.com/Ashar88/Netflix_shows_Analysis__EDA/main/netflix_dataset.csv'

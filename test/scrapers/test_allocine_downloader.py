@@ -1,7 +1,7 @@
 import sys
 from unittest import mock
 
-sys.path.append('/Users/ilan/big-data-airflow-project')
+sys.path.append('/')
 from src.scraping.allocine_scraper import scrap_allocine
 
 def mock_response(url, headers):
