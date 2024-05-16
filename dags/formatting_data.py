@@ -60,7 +60,7 @@ def format_data():
 
 
 with DAG(
-        's3_csv_to_parquet',
+        'formatting_data',
         default_args=default_args,
         description='Convert CSV files from S3 to Parquet and upload back to S3',
         schedule_interval=timedelta(days=1),

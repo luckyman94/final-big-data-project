@@ -10,6 +10,11 @@ class S3Manager:
         csv_files = [key for key in keys if key.endswith('.csv')]
         return csv_files
 
+    def list_parquet_files_in_bucket(self):
+        keys = self.s3.list_keys(bucket_name=self.bucket_name)
+        parquet_files = [key for key in keys if key.endswith('.parquet')]
+        return parquet_files
+
     def download_file(self, key, local_path):
         self.s3.get_key(key, self.bucket_name).download_file(local_path)
 
