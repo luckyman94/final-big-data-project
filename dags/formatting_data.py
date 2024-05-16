@@ -1,13 +1,14 @@
 import os
+import shutil
 import sys
 from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 
 sys.path.append('/Users/ilan/big-data-airflow-project')
 from src.formatting.formatter import FileFormatter
+from src.utils.s3_manager import S3Manager
 
 default_args = {
     'owner': 'airflow',
@@ -19,72 +20,43 @@ default_args = {
 }
 
 data_dir = "/Users/ilan/big-data-airflow-project/data"
-local_csv_dir = os.path.join(data_dir, "csv")
-local_parquet_dir = os.path.join(data_dir, "parquet")
-
-
-def list_csv_files_in_bucket(bucket_name):
-    s3 = S3Hook(aws_conn_id='s3_conn')
-    keys = s3.list_keys(bucket_name=bucket_name)
-    csv_files = [key for key in keys if key.endswith('.csv')]
-    return csv_files
-
-
-def download_csv_from_s3(bucket_name, key, local_path):
-    s3 = S3Hook(aws_conn_id='s3_conn')
-    s3.get_key(key, bucket_name).download_file(local_path)
-
-
-def upload_parquet_to_s3(bucket_name, key, local_path):
-    s3 = S3Hook(aws_conn_id='s3_conn')
-    s3.load_file(local_path, key, bucket_name, replace=True)
 
 
 def clean_local_directory(directory):
-    for file_name in os.listdir(directory):
-        file_path = os.path.join(directory, file_name)
-        if os.path.isfile(file_path):
-            os.remove(file_path)
-        elif os.path.isdir(file_path):
-            for sub_file in os.listdir(file_path):
-                sub_file_path = os.path.join(file_path, sub_file)
-                os.remove(sub_file_path)
-            os.rmdir(file_path)
-
+    if os.path.exists(directory):
+        shutil.rmtree(directory)
 
 def format_data():
+    s3_manager = S3Manager()
     formatter = FileFormatter()
-    bucket_name = "datalake-isep"
-    csv_files = list_csv_files_in_bucket(bucket_name)
+    csv_files = s3_manager.list_csv_files_in_bucket()
+    local_parquet_file = None
 
-    if not os.path.exists(local_csv_dir):
-        os.makedirs(local_csv_dir)
-
-    if not os.path.exists(local_parquet_dir):
-        os.makedirs(local_parquet_dir)
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
 
     for csv_file in csv_files:
-        local_csv_path = os.path.join(local_csv_dir, os.path.basename(csv_file))
-        download_csv_from_s3(bucket_name, csv_file, local_csv_path)
+        local_csv_path = os.path.join(data_dir, os.path.basename(csv_file))
+        s3_manager.download_file(csv_file, local_csv_path)
+        s3_manager.delete_file(csv_file)
+
         df = formatter.read_csv(local_csv_path, header=True)
+        df = formatter.normalize_dates_to_utc(df)
 
-        parquet_subdir = os.path.join(local_parquet_dir, os.path.splitext(os.path.basename(csv_file))[0])
-        if not os.path.exists(parquet_subdir):
-            os.makedirs(parquet_subdir)
+        local_parquet_dir = os.path.join(data_dir, os.path.splitext(os.path.basename(csv_file))[0])
+        formatter.convert_to_parquet(df, local_parquet_dir)
 
-        df.coalesce(1).write.mode("overwrite").parquet(parquet_subdir)
-
-        for file_name in os.listdir(parquet_subdir):
+        for file_name in os.listdir(local_parquet_dir):
             if file_name.endswith(".parquet"):
-                local_parquet_file = os.path.join(parquet_subdir, file_name)
-                parquet_key = os.path.join(os.path.splitext(csv_file)[0] + ".parquet")
-                upload_parquet_to_s3(bucket_name, parquet_key, local_parquet_file)
+                local_parquet_file = os.path.join(local_parquet_dir, file_name)
                 break
 
-    formatter.stop()
+        if local_parquet_file is not None:
+            s3_manager.upload_file(os.path.splitext(csv_file)[0] + ".parquet", local_parquet_file)
 
-    # Clean up local directories
-    #clean_local_directory(data_dir)
+    clean_local_directory(data_dir)
+
+    formatter.stop()
 
 
 with DAG(

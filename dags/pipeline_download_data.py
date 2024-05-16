@@ -6,12 +6,14 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 
-
-
 sys.path.append('/Users/ilan/big-data-airflow-project')
 from src.scraping.allocine_scraper import run_scrap_allocine
 from src.scraping.netflix_downloader import download_netflix_data
 
+data_dir = "/Users/ilan/big-data-airflow-project/data"
+
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
 
 def upload_to_s3(directory, bucket_name):
     hook = S3Hook('s3_conn')
