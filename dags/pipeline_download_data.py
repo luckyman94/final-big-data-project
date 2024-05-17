@@ -42,7 +42,9 @@ with DAG(
     task_scrap_allocine = PythonOperator(
         task_id='scrap_allocine',
         python_callable=run_scrap_allocine,
-        op_kwargs={'num_pages': 2}
+        op_kwargs={
+            'num_pages': 20
+        }
     )
 
     task_scrap_netflix = PythonOperator(
