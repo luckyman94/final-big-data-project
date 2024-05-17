@@ -6,7 +6,7 @@ from unittest import mock
 sys.path.append('/')
 from src.scraping.netflix_downloader import fetch_data_from_github, download_netflix_data
 
-GITHUB_DATA_URL = 'https://raw.githubusercontent.com/Ashar88/Netflix_shows_Analysis__EDA/main/netflix_dataset.csv'
+GITHUB_DATA_URL = 'https://raw.githubusercontent.com/garg-priya-creator/Netflix-Recommendation-System/main/app/NetflixDataset.csv'
 
 def test_fetch_data_from_github(mocker):
     mock_requests_get = mocker.patch('requests.get')

@@ -32,7 +32,7 @@ def fetch_data_from_github(url, **kwargs):
 
 
 def download_netflix_data():
-    GITHUB_DATA_URL = 'https://raw.githubusercontent.com/Ashar88/Netflix_shows_Analysis__EDA/main/netflix_dataset.csv'
+    GITHUB_DATA_URL = 'https://raw.githubusercontent.com/garg-priya-creator/Netflix-Recommendation-System/main/app/NetflixDataset.csv'
     fetch_data_from_github(GITHUB_DATA_URL)
 
 
