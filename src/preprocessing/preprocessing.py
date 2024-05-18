@@ -45,6 +45,9 @@ class Preprocessing:
         mean_value = self.df_netflix.select(mean(col("IMDb Score")).alias("mean")).collect()[0]["mean"]
         self.df_netflix =  self.df_netflix.na.fill({"IMDb Score": mean_value})
 
-        # Rename Series or Movie column to Type
+        # Rename Series or Movie column to Type and IMDb Score to Rating
         self.df_netflix = self.df_netflix.withColumnRenamed("Series or Movie", "Type")
+        self.df_netflix = self.df_netflix.withColumnRenamed("IMDb Score", "Rating")
 
+    def preprocess_allocine(self):
+        return
