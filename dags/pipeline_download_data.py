@@ -36,7 +36,7 @@ with DAG(
     dag_id='s3_dag',
     schedule_interval='@daily',
     start_date=datetime(2022, 3, 1),
-    catchup=False
+    catchup=False,
 ) as dag:
 
     task_scrap_allocine = PythonOperator(
@@ -62,3 +62,4 @@ with DAG(
     )
 
 task_scrap_netflix >> task_scrap_allocine >> task_upload_to_s3
+
