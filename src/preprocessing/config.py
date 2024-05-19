@@ -1,3 +1,6 @@
+DATA_DIR = "/Users/ilan/big-data-airflow-project/data"
+
+
 GENRES = ["Action",
           "Adventure",
           "Animation",

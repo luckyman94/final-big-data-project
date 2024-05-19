@@ -23,3 +23,4 @@ class S3Manager:
 
     def delete_file(self, key):
         self.s3.delete_objects(bucket=self.bucket_name,keys=key)
+

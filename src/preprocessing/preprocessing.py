@@ -3,28 +3,27 @@ import os
 from pyspark.shell import spark
 from pyspark.sql.functions import col, round as spark_round, mean, split, array_contains, udf, when, regexp_replace
 from pyspark.sql.types import FloatType, StringType
-
-import config
+from . import config
 from src.utils.s3_manager import S3Manager
 
-data_dir = "/Users/ilan/big-data-airflow-project/data"
+
 
 
 class Preprocessing:
     def __init__(self):
         self.s3_manager = S3Manager()
         self.download_data()
-        self.df_allocine = spark.read.csv(data_dir + "/allocine_movies.csv", header=True)
-        self.df_netflix = spark.read.csv(data_dir + "/NetflixDataset.csv", header=True)
+        self.df_allocine = spark.read.parquet(config.DATA_DIR + "/allocine_movies.parquet", header=True)
+        self.df_netflix = spark.read.parquet(config.DATA_DIR + "/NetflixDataset.parquet", header=True)
 
     def download_data(self):
-        if not os.path.exists(data_dir):
-            os.makedirs(data_dir)
+        if not os.path.exists(config.DATA_DIR):
+            os.makedirs(config.DATA_DIR)
 
         parquet_files = self.s3_manager.list_parquet_files_in_bucket()
         for file in parquet_files:
-            if not os.path.exists(data_dir + "/" + file):
-                self.s3_manager.download_file(file, data_dir + "/" + file)
+            local_path = os.path.join(config.DATA_DIR, os.path.basename(file))
+            self.s3_manager.download_file(file, local_path)
 
     def preprocess_netflix(self, export_parquet=False):
         self.df_netflix = self.df_netflix.drop("Tags",
@@ -56,9 +55,10 @@ class Preprocessing:
             self.df_netflix = self.df_netflix.withColumn(genre, array_contains(col("Genre"), genre).cast("integer"))
 
         if export_parquet:
-            self.df_netflix.write.parquet(data_dir + "/NetflixDataset_preprocessed.parquet")
+            self.df_netflix.coalesce(1).write.mode('overwrite').parquet(
+                os.path.join(config.DATA_DIR + "/NetflixDataset_preprocessed.parquet"))
 
-    def preprocess_allocine(self):
+    def preprocess_allocine(self, export_parquet=False):
         self.df_allocine = self.df_allocine.drop("Director", "Release Date")
 
         # Renaming columns to match the Netflix dataset
@@ -66,8 +66,27 @@ class Preprocessing:
         self.df_allocine = self.df_allocine.withColumnRenamed("Synopsis", "Summary")
 
         # Convert runtime to interval (categorical variable)
-        convert_runtime_udf = udf(self._convert_runtime_to_interval, StringType())
-        self.df_allocine = self.df_allocine.withColumn("Runtime", convert_runtime_udf(self.df_allocine["Runtime"]))
+        self.df_allocine = self.df_allocine.dropna(subset=["Runtime"])
+        self.df_allocine = self.df_allocine.withColumn("Runtime", regexp_replace("Runtime", "min", ""))
+        self.df_allocine = self.df_allocine.withColumn("Runtime", regexp_replace("Runtime", "h", ""))
+        self.df_allocine = self.df_allocine.withColumn("Runtime", split(col("Runtime"), " "))
+        def convert_runtime_to_interval(runtime_array):
+            hours = int(runtime_array[0])
+            minutes = int(runtime_array[1]) if len(runtime_array) > 1 else 0
+            total_hours = hours + minutes / 60
+            if total_hours > 2:
+                return '> 2 hrs'
+            elif total_hours < 0.5:
+                return '< 30 minutes'
+            elif total_hours < 1 and total_hours >= 0.5:
+                return '30 - 60 mins'
+            else:
+                return '1-2 hour'
+
+        convert_runtime_to_interval_udf = udf(convert_runtime_to_interval, StringType())
+
+
+        self.df_allocine = self.df_allocine.withColumn("Runtime", convert_runtime_to_interval_udf(col("Runtime")))
 
         # Merge the spectator rating and the press rating into a single rating column
         self.df_allocine = self._merge_ratings()
@@ -77,17 +96,10 @@ class Preprocessing:
         for genre in config.GENRES:
             self.df_allocine = self.df_allocine.withColumn(genre, array_contains(col("Genre"), genre).cast("integer"))
 
-    def _convert_runtime_to_interval(self, runtime):
-        hours, minutes = map(int, runtime.replace('min', '').replace('h', '').split())
-        total_hours = hours + minutes / 60
-        if total_hours > 2:
-            return '> 2 hrs'
-        elif total_hours < 0.5:
-            return '< 30 minutes'
-        elif total_hours < 1 and total_hours >= 0.5:
-            return '30 - 60 mins'
-        else:
-            return '1-2 hour'
+        if export_parquet:
+            self.df_allocine.coalesce(1).write.mode('overwrite').parquet(
+                os.path.join(config.DATA_DIR + "/allocine_movies_preprocessed.parquet"))
+
 
     def _merge_ratings(self):
         self.df_allocine = self.df_allocine.withColumn("Press Rating", regexp_replace(col("Press Rating"), ",", "."))
