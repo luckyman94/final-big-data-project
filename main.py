@@ -15,4 +15,8 @@ if __name__ == '__main__':
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
 # TODO: Reorganise DATA DIR constant
+# TODO : reorganiser preprocessing
+# TODO : drop duplicates
+# TODO : creer clase pipeline
+# TODO : Ameliorer le modèle
 

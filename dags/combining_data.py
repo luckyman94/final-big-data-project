@@ -36,7 +36,7 @@ def combine_data():
     pp.combine_data()
 
     #Upload data to s3 bucket
-    s3_manager.upload_directory(DATA_DIR, s3_directory="combining")
+    s3_manager.upload_directory(DATA_DIR, s3_directory="combined_data")
 
     #Stop spark session
     pp.stop()

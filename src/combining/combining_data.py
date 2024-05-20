@@ -37,6 +37,7 @@ class CombiningData:
         # Missing values for the runtime column
         self.df_netflix = self.df_netflix.fillna({'runtime': '1-2 hour'})
 
+
         # Normalize the IMDb Score column to a 0-5 scale
         self.df_netflix = self.df_netflix.withColumn("IMDb Score", col("IMDb Score").cast(FloatType()))
         self.df_netflix = self.df_netflix.withColumn("IMDb Score", spark_round(col("IMDb Score") / 2, 1))
@@ -56,6 +57,7 @@ class CombiningData:
 
         self.df_netflix = self.df_netflix.drop("Genre")
         self.df_netflix = self.df_netflix.dropna(subset=["Summary"])
+        self.df_netflix = self.df_netflix.dropna(subset=["Actors"])
 
         if export_parquet:
             parquet_file_path = config.DATA_DIR + "/NetflixDataset_preprocessed.parquet"
@@ -101,6 +103,7 @@ class CombiningData:
 
         self.df_allocine = self.df_allocine.drop("Genre")
         self.df_allocine = self.df_allocine.dropna(subset=["Summary"])
+        self.df_allocine = self.df_allocine.dropna(subset=["Actors"])
 
         # Add a column type to match the Netflix dataset
         self.df_allocine = self.df_allocine.withColumn("Type", lit("Movie"))

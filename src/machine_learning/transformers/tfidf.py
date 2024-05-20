@@ -3,15 +3,18 @@ from pyspark.shell import spark
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction.text import TfidfVectorizer
+import nltk
+
 
 DATA_DIR = "/Users/ilan/big-data-airflow-project/data/"
-class TFIDFPCATransformer(BaseEstimator, TransformerMixin):
+class TFIDFTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, column, max_features, n_components):
         self.column = column
         self.max_features = max_features
         self.n_components = n_components
-        self.vectorizer = TfidfVectorizer(max_features=max_features)
+        self.vectorizer = TfidfVectorizer(max_features=max_features, stop_words='english')
         self.svd = TruncatedSVD(n_components=n_components)
+        self.tfidf_matrix = None
 
     def fit(self, X, y=None):
         vectors = self.vectorizer.fit_transform(X[self.column])
@@ -21,12 +24,14 @@ class TFIDFPCATransformer(BaseEstimator, TransformerMixin):
     def transform(self, X):
         vectors = self.vectorizer.transform(X[self.column])
         svd_result = self.svd.transform(vectors)
-        tfidf_df = pd.DataFrame(svd_result, columns=[f"{self.column}_tfidf_{i}" for i in range(self.n_components)])
+        self.tfidf_matrix = svd_result
+        tfidf_df = pd.DataFrame(self.tfidf_matrix,
+                                columns=[f"{self.column}_tfidf_{i}" for i in range(self.n_components)])
         X = pd.concat([X, tfidf_df], axis="columns")
         return X
 
+    def get_tfidf_matrix(self):
+        return self.tfidf_matrix
 
-if __name__ == '__main__':
-    df = (spark.read.parquet(DATA_DIR + "/final_dataset.parquet", header=True, inferSchema=True)).toPandas()
-    df = TFIDFPCATransformer(column="Summary", max_features=1000, n_components=5).fit_transform(df)
-    print(df)
+
+
