@@ -4,7 +4,8 @@ from datetime import datetime
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+
+from src.utils.s3_manager import S3Manager
 
 sys.path.append('/Users/ilan/big-data-airflow-project')
 from src.scraping.allocine_scraper import run_scrap_allocine
@@ -15,21 +16,9 @@ data_dir = "/Users/ilan/big-data-airflow-project/data"
 if not os.path.exists(data_dir):
     os.makedirs(data_dir)
 
-def upload_to_s3(directory, bucket_name):
-    hook = S3Hook('s3_conn')
-
-    for root, dirs, files in os.walk(directory):
-        for filename in files:
-            if filename.endswith('.csv'):
-                filepath = os.path.join(root, filename)
-                key = os.path.relpath(filepath, directory)
-                if not hook.check_for_key(key, bucket_name=bucket_name):
-                    hook.load_file(filename=filepath, key=key, bucket_name=bucket_name)
-                    print(f"File {filename} loaded successfully in the bucket {bucket_name}.")
-                else:
-                    print(f"File {filename} already exists in the bucket {bucket_name}, skipping.")
-
-                os.remove(filepath)
+def upload_to_s3():
+    s3_manager = S3Manager()
+    s3_manager.upload_directory(data_dir,  remove_files=True, extension='.csv')
 
 
 with DAG(
@@ -43,7 +32,7 @@ with DAG(
         task_id='scrap_allocine',
         python_callable=run_scrap_allocine,
         op_kwargs={
-            'num_pages': 20
+            'num_pages': 1
         }
     )
 
@@ -54,11 +43,8 @@ with DAG(
 
     task_upload_to_s3 = PythonOperator(
         task_id='upload_to_s3',
-        python_callable=upload_to_s3,
-        op_kwargs={
-            'directory': '/Users/ilan/big-data-airflow-project/data',
-            'bucket_name': 'datalake-isep'
-        }
+        python_callable=upload_to_s3
+
     )
 
 task_scrap_netflix >> task_scrap_allocine >> task_upload_to_s3

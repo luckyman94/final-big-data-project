@@ -21,16 +21,40 @@ class S3Manager:
     def upload_file(self, key, local_path):
         self.s3.load_file(local_path, key, self.bucket_name, replace=True)
 
-    def upload_directory(self, local_directory, s3_directory):
+    def upload_directory(self, local_directory, remove_files=False, extension='.parquet'):
+        local_directory = os.path.abspath(local_directory)
         if not local_directory.endswith('/'):
             local_directory += '/'
-        for root, dirs, files in os.walk(local_directory):
+
+        for root, dirs, files in os.walk(local_directory, topdown=False):
             for file in files:
-                local_path = os.path.join(root, file)
-                relative_path = os.path.relpath(local_path, local_directory)
-                s3_path = os.path.join(s3_directory, relative_path)
-                self.upload_file(s3_path, local_path)
-                print(f"Uploaded {local_path} to {s3_path}")
+                if file.endswith(extension):
+                    filepath = os.path.join(root, file)
+                    key = os.path.relpath(filepath, local_directory).replace(os.sep, '/')
+                    if not self.s3.check_for_key(key, bucket_name=self.bucket_name):
+                        self.upload_file(key, filepath)
+                        print(f"Uploaded {filepath} to {self.bucket_name}/{key}")
+                    else:
+                        print(f"File {file} already exists in the bucket {self.bucket_name}, skipping.")
+
+                    if remove_files:
+                        os.remove(filepath)
+                        print(f"Removed {filepath}")
+
+            if remove_files:
+                try:
+                    os.rmdir(root)
+                    print(f"Removed directory {root}")
+                except OSError as e:
+                    print(f"Failed to remove directory {root}: {e}")
+
+        if remove_files:
+            try:
+                if not os.listdir(local_directory):
+                    os.rmdir(local_directory)
+                    print(f"Removed directory {local_directory}")
+            except OSError as e:
+                print(f"Failed to remove directory {local_directory}: {e}")
 
     def delete_file(self, key):
         self.s3.delete_objects(bucket=self.bucket_name,keys=key)
