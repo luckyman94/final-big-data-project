@@ -14,5 +14,6 @@ if __name__ == '__main__':
     print_hi('PyCharm')
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
-# TODO: use s3 manager everywhere, move the formatter to utils
+# TODO: use s3 manager everywhere, move the formatter to utils.
+# TODO: Reorganise DATA DIR constant
 

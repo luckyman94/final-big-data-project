@@ -1,7 +1,7 @@
 import os
 
 from pyspark.shell import spark
-from pyspark.sql.functions import col, round as spark_round, mean, split, array_contains, udf, when, regexp_replace
+from pyspark.sql.functions import col, round as spark_round, mean, split, array_contains, udf, when, regexp_replace, lit
 from pyspark.sql.types import FloatType, StringType
 from . import config
 from src.utils.s3_manager import S3Manager
@@ -54,9 +54,11 @@ class Preprocessing:
         for genre in config.GENRES:
             self.df_netflix = self.df_netflix.withColumn(genre, array_contains(col("Genre"), genre).cast("integer"))
 
+        self.df_netflix = self.df_netflix.drop("Genre")
+
         if export_parquet:
             parquet_file_path = config.DATA_DIR + "/NetflixDataset_preprocessed.parquet"
-            self.df_allocine.coalesce(1).write.parquet(parquet_file_path)
+            self.df_netflix.coalesce(1).write.parquet(parquet_file_path)
 
     def preprocess_allocine(self, export_parquet=False):
         self.df_allocine = self.df_allocine.drop("Director", "Release Date")
@@ -96,11 +98,22 @@ class Preprocessing:
         for genre in config.GENRES:
             self.df_allocine = self.df_allocine.withColumn(genre, array_contains(col("Genre"), genre).cast("integer"))
 
+        self.df_allocine = self.df_allocine.drop("Genre")
+
+        # Add a column type to match the Netflix dataset
+        self.df_allocine = self.df_allocine.withColumn("Type", lit("Movie"))
+
         if export_parquet:
             parquet_file_path = config.DATA_DIR + "/allocine_movies_preprocessed.parquet"
             self.df_allocine.coalesce(1).write.parquet(parquet_file_path)
 
+    def combine_data(self):
+        parquet_path = config.DATA_DIR + "/final_dataset.parquet"
+        df1 = spark.read.parquet(config.DATA_DIR + "/NetflixDataset_preprocessed.parquet", header=True, inferSchema=True)
+        df2 = spark.read.parquet(config.DATA_DIR + "/allocine_movies_preprocessed.parquet", header=True, inferSchema=True)
 
+        self.final_dataset = self._combine_two_dataframe(df1, df2)
+        self.final_dataset.write.parquet(parquet_path)
 
     def _merge_ratings(self):
         self.df_allocine = self.df_allocine.withColumn("Press Rating", regexp_replace(col("Press Rating"), ",", "."))
@@ -137,6 +150,17 @@ class Preprocessing:
         for genre in config.ALLOCINE_GENRE_MAPPING:
             self.df_allocine = self._transform_value_of_a_df(self.df_allocine, "Genre", genre,
                                                              config.ALLOCINE_GENRE_MAPPING[genre])
+
+
+    def _combine_two_dataframe(self, df1, df2):
+        # Reorder columns to match
+        df2_reordered = df2.select(df1.columns)
+
+        # Combine the two dataframes
+        combined_df = df1.union(df2_reordered)
+        return combined_df
+
+
 
 
     def stop(self):
