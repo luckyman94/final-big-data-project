@@ -21,6 +21,17 @@ class S3Manager:
     def upload_file(self, key, local_path):
         self.s3.load_file(local_path, key, self.bucket_name, replace=True)
 
+    def upload_directory(self, local_directory, s3_directory):
+        if not local_directory.endswith('/'):
+            local_directory += '/'
+        for root, dirs, files in os.walk(local_directory):
+            for file in files:
+                local_path = os.path.join(root, file)
+                relative_path = os.path.relpath(local_path, local_directory)
+                s3_path = os.path.join(s3_directory, relative_path)
+                self.upload_file(s3_path, local_path)
+                print(f"Uploaded {local_path} to {s3_path}")
+
     def delete_file(self, key):
         self.s3.delete_objects(bucket=self.bucket_name,keys=key)
 

@@ -31,6 +31,11 @@ def run_preprocessing():
     os.remove(local_path)
     print("End preprocessing allocine")
 
+    #Upload data to s3 bucket
+    s3_manager.upload_directory(DATA_DIR, 'preprocessing')
+
+    pp.stop()
+
 
 
 

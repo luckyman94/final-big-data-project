@@ -55,8 +55,8 @@ class Preprocessing:
             self.df_netflix = self.df_netflix.withColumn(genre, array_contains(col("Genre"), genre).cast("integer"))
 
         if export_parquet:
-            self.df_netflix.coalesce(1).write.mode('overwrite').parquet(
-                os.path.join(config.DATA_DIR + "/NetflixDataset_preprocessed.parquet"))
+            parquet_file_path = config.DATA_DIR + "/NetflixDataset_preprocessed.parquet"
+            self.df_allocine.coalesce(1).write.parquet(parquet_file_path)
 
     def preprocess_allocine(self, export_parquet=False):
         self.df_allocine = self.df_allocine.drop("Director", "Release Date")
@@ -70,9 +70,9 @@ class Preprocessing:
         self.df_allocine = self.df_allocine.withColumn("Runtime", regexp_replace("Runtime", "min", ""))
         self.df_allocine = self.df_allocine.withColumn("Runtime", regexp_replace("Runtime", "h", ""))
         self.df_allocine = self.df_allocine.withColumn("Runtime", split(col("Runtime"), " "))
-        def convert_runtime_to_interval(runtime_array):
-            hours = int(runtime_array[0])
-            minutes = int(runtime_array[1]) if len(runtime_array) > 1 else 0
+        def convert_runtime_to_interval(runtime):
+            hours = int(runtime[0])
+            minutes = int(runtime[1]) if len(runtime) > 1 else 0
             total_hours = hours + minutes / 60
             if total_hours > 2:
                 return '> 2 hrs'
@@ -97,8 +97,9 @@ class Preprocessing:
             self.df_allocine = self.df_allocine.withColumn(genre, array_contains(col("Genre"), genre).cast("integer"))
 
         if export_parquet:
-            self.df_allocine.coalesce(1).write.mode('overwrite').parquet(
-                os.path.join(config.DATA_DIR + "/allocine_movies_preprocessed.parquet"))
+            parquet_file_path = config.DATA_DIR + "/allocine_movies_preprocessed.parquet"
+            self.df_allocine.coalesce(1).write.parquet(parquet_file_path)
+
 
 
     def _merge_ratings(self):
@@ -136,3 +137,7 @@ class Preprocessing:
         for genre in config.ALLOCINE_GENRE_MAPPING:
             self.df_allocine = self._transform_value_of_a_df(self.df_allocine, "Genre", genre,
                                                              config.ALLOCINE_GENRE_MAPPING[genre])
+
+
+    def stop(self):
+        spark.stop()
