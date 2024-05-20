@@ -28,5 +28,5 @@ class TFIDFPCATransformer(BaseEstimator, TransformerMixin):
 
 if __name__ == '__main__':
     df = (spark.read.parquet(DATA_DIR + "/final_dataset.parquet", header=True, inferSchema=True)).toPandas()
-    print(df["Summary"].isna().sum())
-    #TFIDFPCATransformer(column="Summary", max_features=1000, n_components=5).fit_transform(df)
+    df = TFIDFPCATransformer(column="Summary", max_features=1000, n_components=5).fit_transform(df)
+    print(df)
