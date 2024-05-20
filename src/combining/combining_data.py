@@ -9,7 +9,7 @@ from src.utils.s3_manager import S3Manager
 
 
 
-class Preprocessing:
+class CombiningData:
     def __init__(self):
         self.s3_manager = S3Manager()
         self.download_data()
@@ -55,6 +55,7 @@ class Preprocessing:
             self.df_netflix = self.df_netflix.withColumn(genre, array_contains(col("Genre"), genre).cast("integer"))
 
         self.df_netflix = self.df_netflix.drop("Genre")
+        self.df_netflix.dropna("Summary")
 
         if export_parquet:
             parquet_file_path = config.DATA_DIR + "/NetflixDataset_preprocessed.parquet"
@@ -99,6 +100,7 @@ class Preprocessing:
             self.df_allocine = self.df_allocine.withColumn(genre, array_contains(col("Genre"), genre).cast("integer"))
 
         self.df_allocine = self.df_allocine.drop("Genre")
+        self.df_allocine.dropna("Summary")
 
         # Add a column type to match the Netflix dataset
         self.df_allocine = self.df_allocine.withColumn("Type", lit("Movie"))
