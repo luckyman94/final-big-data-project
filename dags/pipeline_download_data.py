@@ -30,7 +30,7 @@ with DAG(
         task_id='scrap_allocine',
         python_callable=run_scrap_allocine,
         op_kwargs={
-            'num_pages': 1
+            'num_pages': 20
         }
     )
 
