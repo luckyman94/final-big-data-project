@@ -1,9 +1,11 @@
 import os
+import sys
 from datetime import timedelta, datetime
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
+sys.path.append('/Users/ilan/big-data-airflow-project')
 from src.preprocessing.preprocessing import Preprocessing
 from src.utils.s3_manager import S3Manager
 

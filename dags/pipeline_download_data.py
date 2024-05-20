@@ -3,9 +3,10 @@ import sys
 from datetime import datetime
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from src.utils.s3_manager import S3Manager
+
 
 sys.path.append('/Users/ilan/big-data-airflow-project')
+from src.utils.s3_manager import S3Manager
 from src.scraping.allocine_scraper import run_scrap_allocine
 from src.scraping.netflix_downloader import download_netflix_data
 
