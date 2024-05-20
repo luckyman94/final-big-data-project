@@ -35,13 +35,10 @@ def run_preprocessing():
     pp.combine_data()
 
     #Upload data to s3 bucket
-    s3_manager.upload_directory(DATA_DIR, 'preprocessing')
+    s3_manager.upload_directory(DATA_DIR, s3_directory="preprocessing")
 
     #Stop spark session
     pp.stop()
-
-
-
 
 default_args = {
     'owner': 'airflow',

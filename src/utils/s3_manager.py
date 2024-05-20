@@ -21,7 +21,7 @@ class S3Manager:
     def upload_file(self, key, local_path):
         self.s3.load_file(local_path, key, self.bucket_name, replace=True)
 
-    def upload_directory(self, local_directory, remove_files=False, extension='.parquet'):
+    def upload_directory(self, local_directory, s3_directory=None, remove_files=False, extension='.parquet'):
         local_directory = os.path.abspath(local_directory)
         if not local_directory.endswith('/'):
             local_directory += '/'
@@ -30,7 +30,10 @@ class S3Manager:
             for file in files:
                 if file.endswith(extension):
                     filepath = os.path.join(root, file)
-                    key = os.path.relpath(filepath, local_directory).replace(os.sep, '/')
+                    if s3_directory is None:
+                        key = os.path.relpath(filepath, local_directory).replace(os.sep, '/')
+                    else :
+                        key = os.path.join(s3_directory, os.path.relpath(filepath, local_directory).replace(os.sep, '/'))
                     if not self.s3.check_for_key(key, bucket_name=self.bucket_name):
                         self.upload_file(key, filepath)
                         print(f"Uploaded {filepath} to {self.bucket_name}/{key}")

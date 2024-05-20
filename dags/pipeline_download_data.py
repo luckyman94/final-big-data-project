@@ -1,10 +1,8 @@
 import os
 import sys
 from datetime import datetime
-
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-
 from src.utils.s3_manager import S3Manager
 
 sys.path.append('/Users/ilan/big-data-airflow-project')
