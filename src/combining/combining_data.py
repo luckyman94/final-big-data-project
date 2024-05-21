@@ -37,7 +37,6 @@ class CombiningData:
         # Missing values for the runtime column
         self.df_netflix = self.df_netflix.fillna({'runtime': '1-2 hour'})
 
-
         # Normalize the IMDb Score column to a 0-5 scale
         self.df_netflix = self.df_netflix.withColumn("IMDb Score", col("IMDb Score").cast(FloatType()))
         self.df_netflix = self.df_netflix.withColumn("IMDb Score", spark_round(col("IMDb Score") / 2, 1))
@@ -50,12 +49,6 @@ class CombiningData:
         self.df_netflix = self.df_netflix.withColumnRenamed("Series or Movie", "Type")
         self.df_netflix = self.df_netflix.withColumnRenamed("IMDb Score", "Rating")
 
-        # One Hot Encoding of the genre.
-        self.df_netflix = self.df_netflix.withColumn("Genre", split(col("Genre"), ",\s*"))
-        for genre in config.GENRES:
-            self.df_netflix = self.df_netflix.withColumn(genre, array_contains(col("Genre"), genre).cast("integer"))
-
-        self.df_netflix = self.df_netflix.drop("Genre")
         self.df_netflix = self.df_netflix.dropna(subset=["Summary"])
         self.df_netflix = self.df_netflix.dropna(subset=["Actors"])
 
@@ -70,44 +63,12 @@ class CombiningData:
         self.df_allocine = self.df_allocine.withColumnRenamed("Duration", "Runtime")
         self.df_allocine = self.df_allocine.withColumnRenamed("Synopsis", "Summary")
 
-        # Convert runtime to interval (categorical variable)
-        self.df_allocine = self.df_allocine.dropna(subset=["Runtime"])
-        self.df_allocine = self.df_allocine.withColumn("Runtime", regexp_replace("Runtime", "min", ""))
-        self.df_allocine = self.df_allocine.withColumn("Runtime", regexp_replace("Runtime", "h", ""))
-        self.df_allocine = self.df_allocine.withColumn("Runtime", split(col("Runtime"), " "))
-        def convert_runtime_to_interval(runtime):
-            hours = int(runtime[0])
-            minutes = int(runtime[1]) if len(runtime) > 1 else 0
-            total_hours = hours + minutes / 60
-            if total_hours > 2:
-                return '> 2 hrs'
-            elif total_hours < 0.5:
-                return '< 30 minutes'
-            elif total_hours < 1 and total_hours >= 0.5:
-                return '30 - 60 mins'
-            else:
-                return '1-2 hour'
-
-        convert_runtime_to_interval_udf = udf(convert_runtime_to_interval, StringType())
-
-
-        self.df_allocine = self.df_allocine.withColumn("Runtime", convert_runtime_to_interval_udf(col("Runtime")))
 
         # Merge the spectator rating and the press rating into a single rating column
         self.df_allocine = self._merge_ratings()
 
-        # One Hot Encoding of the genre.
-        self.df_allocine = self.df_allocine.withColumn("Genre", split(col("Genre"), ", "))
-        for genre in config.GENRES:
-            self.df_allocine = self.df_allocine.withColumn(genre, array_contains(col("Genre"), genre).cast("integer"))
-
-        self.df_allocine = self.df_allocine.drop("Genre")
-        self.df_allocine = self.df_allocine.dropna(subset=["Summary"])
-        self.df_allocine = self.df_allocine.dropna(subset=["Actors"])
-
         # Add a column type to match the Netflix dataset
         self.df_allocine = self.df_allocine.withColumn("Type", lit("Movie"))
-
         if export_parquet:
             parquet_file_path = config.DATA_DIR + "/allocine_movies_preprocessed.parquet"
             self.df_allocine.coalesce(1).write.parquet(parquet_file_path)
@@ -150,11 +111,6 @@ class CombiningData:
 
     def _transform_value_of_a_df(self, df, column_name, old_value, new_value):
         return df.withColumn(column_name, regexp_replace(column_name, old_value, new_value))
-
-    def _transform_genre_to_match_netflix_genre(self):
-        for genre in config.ALLOCINE_GENRE_MAPPING:
-            self.df_allocine = self._transform_value_of_a_df(self.df_allocine, "Genre", genre,
-                                                             config.ALLOCINE_GENRE_MAPPING[genre])
 
 
     def _combine_two_dataframe(self, df1, df2):
