@@ -1,5 +1,4 @@
 import pandas as pd
-from pyspark.shell import spark
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction.text import TfidfVectorizer

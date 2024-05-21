@@ -26,21 +26,49 @@ class GenreTransformer(BaseEstimator, TransformerMixin):
 
         self.column = column
 
+
     def fit(self, X, y=None):
         return self
 
     def transform(self, X):
         X_copy = X.copy()
-        X[self.column] = X[self.column].str.split(", ")
+        X_copy[self.column] = X_copy[self.column].str.split(", ")
+
         for genre in self.genres:
-            X[genre] = X[self.column].apply(lambda x: genre in x).astype("int")
+            X_copy[genre] = X_copy[self.column].apply(lambda genres: int(genre in genres if genres else 0))
+
+        return X_copy
 
 
-        return pd.concat([X_copy, X[self.column]], axis=1)
 
 
+from sklearn.base import TransformerMixin, BaseEstimator
+import pandas as pd
 
+class GenreRenameTransformer(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        self.column = "Genre"
+        self.map = {
+            "Science fiction": "Sci-Fi",
+            "Comédie": "Comedy",
+            "Drame": "Drama",
+            "Comédie dramatique": "Drama",
+            "Police": "Crime",
+            "Epouvante-horreur": "Horror",
+            "Historique": "Documentary",
+        }
 
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        if not isinstance(X, pd.DataFrame):
+            raise TypeError("Input must be a pandas DataFrame")
+
+        for column in X.columns:
+            if X[column].dtype == 'object':
+                X[column] = X[column].map(self.map).fillna(X[column])
+        return X
 
 
 

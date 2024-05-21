@@ -2,9 +2,13 @@ import pandas as pd
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.pipeline import Pipeline
 
-from src.machine_learning.transformers.genre_renamer import GenreRenameTransformer
+from src.machine_learning.transformers.drop import DropColumn, DropDuplicates
+from src.machine_learning.transformers.filter_type import FilterTypeTransformer
+from src.machine_learning.transformers.genre import GenreTransformer, GenreRenameTransformer
 from src.machine_learning.transformers.missing_values import MissingValuesTransformer
+from src.machine_learning.transformers.ohe import OneHotEncoderTransformer
 from src.machine_learning.transformers.runtime import RuntimeTransformer
+from src.machine_learning.transformers.tfidf import TFIDFTransformer
 
 
 class PipelineTransformer(BaseEstimator, TransformerMixin):
@@ -13,9 +17,13 @@ class PipelineTransformer(BaseEstimator, TransformerMixin):
             ('missing_values', MissingValuesTransformer()),
             ('runtime', RuntimeTransformer()),
             ('genre_renamer', GenreRenameTransformer()),
-
+            ('genre', GenreTransformer()),
+            ('filter_type', FilterTypeTransformer()),
+            ('ohe', OneHotEncoderTransformer(columns=["Runtime", "Type"])),
+            ('tfidf', TFIDFTransformer(column="Summary", max_features=1000, n_components=50)),
+            ('drop_columns', DropColumn(cols=["Genre"])),
+            ('drop_duplicated', DropDuplicates()),
         ]
-
         self.pipeline = Pipeline(self.steps)
 
     def fit(self, X, y=None):
@@ -26,11 +34,7 @@ class PipelineTransformer(BaseEstimator, TransformerMixin):
 
 
 
-if __name__ == "__main__":
-    a = pd.read_parquet("/Users/ilan/big-data-airflow-project/data/final_dataset.parquet")
-    pp = PipelineTransformer()
-    b = pp.fit_transform(a)
-    print(b["Genre"].head())
+
 
 
 
