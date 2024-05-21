@@ -1,7 +1,10 @@
 import pandas as pd
 from sklearn.metrics.pairwise import linear_kernel
 
+
 from src.machine_learning.pipeline import PipelineTransformer
+
+
 class RecommendationModel:
     def __init__(self, df):
         self.pipeline = PipelineTransformer()
@@ -25,7 +28,5 @@ class RecommendationModel:
             return []
 
         return self.train['Title'].iloc[movie_indices]
-
-
 
 
