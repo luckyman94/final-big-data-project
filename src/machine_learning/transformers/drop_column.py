@@ -1,6 +1,5 @@
 from sklearn.base import BaseEstimator, TransformerMixin
 
-
 class DropColumn(BaseEstimator, TransformerMixin):
     def __init__(self, cols=[]):
         self.cols = cols

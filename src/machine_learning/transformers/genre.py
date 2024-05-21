@@ -40,11 +40,7 @@ class GenreTransformer(BaseEstimator, TransformerMixin):
 
 
 
-if __name__ == '__main__':
-    a = pd.read_parquet(DATA_DIR + "/allocine_movies.parquet")
-    a.dropna(subset=["Duration"], inplace=True)
 
-    print(GenreTransformer().fit_transform(a))
 
 
 
