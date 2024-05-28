@@ -1,18 +1,58 @@
-# This is a sample Python script.
+import pandas as pd
+from elasticsearch import Elasticsearch
+from elasticsearch.helpers import bulk
+from urllib3.exceptions import InsecureRequestWarning
+import warnings
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
+warnings.filterwarnings('ignore', category=InsecureRequestWarning)
 
 
-# Press the green button in the gutter to run the script.
+
+df = pd.read_parquet('/Users/ilan/big-data-airflow-project/data/recomentations.parquet')
+
+
+es = Elasticsearch(
+    ['https://localhost:9200'],
+    basic_auth=('elastic', '3X8=I9lGR+0HteADlaik'),
+    verify_certs=False
+)
+
+
+
+
+
+index_name = 'movie_recommendations'
+
+
+mapping = {
+    "mappings": {
+        "properties": {
+            "input_title": {"type": "text"},
+            "recommended_title": {"type": "text"}
+        }
+    }
+}
+
+if es.indices.exists(index=index_name):
+    es.indices.delete(index=index_name)
+
+es.indices.create(index=index_name, body=mapping)
+
+def generate_actions(df):
+    for _, row in df.iterrows():
+        yield {
+            "_index": index_name,
+            "_source": {
+                "input_title": row['input_title'],
+                "recommended_title": row['recommended_title']
+            }
+        }
+
+# Indexation en bulk
+
 if __name__ == '__main__':
-    print_hi('PyCharm')
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
-# TODO: Reorganise DATA DIR constant
+    actions = generate_actions(df)
+    bulk(es, actions)
 
+    print("Indexation terminée avec succès !")
